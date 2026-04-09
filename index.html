@@ -76,6 +76,14 @@
   .feedback h3{margin:0 0 10px;font-size:19px}
   .tag{display:inline-block;padding:6px 10px;border-radius:999px;font-size:11px;font-weight:900;background:rgba(255,255,255,.06);margin-right:6px;margin-bottom:6px}
   .list{margin:10px 0 0;padding-left:18px;color:var(--muted);font-size:13px;line-height:1.5}
+  .entryList{display:grid;gap:12px;margin-top:14px}
+  .entryCard{padding:14px;border-radius:18px;background:linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.018));border:1px solid rgba(255,255,255,.07)}
+  .entryTop{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+  .entryTitle{font-size:16px;font-weight:800}
+  .entryMeta{font-size:12px;color:var(--muted);margin-top:4px}
+  .entryImg{width:100%;border-radius:16px;margin-top:10px;border:1px solid rgba(255,255,255,.08);display:none;max-height:220px;object-fit:cover}
+  .previewImg{width:100%;border-radius:16px;margin-top:10px;border:1px solid rgba(255,255,255,.08);display:none;max-height:220px;object-fit:cover}
+  .tiny{font-size:11px;color:var(--muted)}
   .sheet,.popup{
     position:fixed;inset:0;background:rgba(5,4,10,.62);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;z-index:60;padding:12px
   }
@@ -203,30 +211,31 @@
       <div class="smallBadge" id="journalBadge">WAIT</div>
       <div class="journalGrid" style="margin-top:12px;">
         <div class="row2">
-          <input class="field" id="strategyField" value="ICC" readonly />
-          <input class="field" id="modeField" value="1M" readonly />
+          <input class="field" id="iccStrategyField" value="ICC" readonly />
+          <input class="field" id="iccModeField" value="1M" readonly />
         </div>
         <div class="row2">
-          <input class="field" id="sessionField" value="NY" readonly />
-          <input class="field" id="scoreField" value="0%" readonly />
+          <input class="field" id="iccSessionField" value="NY" readonly />
+          <input class="field" id="iccScoreField" value="0%" readonly />
         </div>
         <div class="row2">
-          <input class="field" placeholder="Entry" />
-          <input class="field" placeholder="Stop Loss" />
+          <input class="field" id="iccEntryField" placeholder="Entry" />
+          <input class="field" id="iccSlField" placeholder="Stop Loss" />
         </div>
         <div class="row2">
-          <input class="field" placeholder="TP1 / TP2" />
-          <select class="field">
+          <input class="field" id="iccTpField" placeholder="TP1 / TP2" />
+          <select class="field" id="iccResultField">
             <option value="">Result</option>
             <option>Win</option>
             <option>Loss</option>
             <option>Breakeven</option>
           </select>
         </div>
-        <textarea class="field" placeholder="Mistake / lesson / note"></textarea>
-        <input class="field" type="file" />
+        <textarea class="field" id="iccLessonField" placeholder="Mistake / lesson / note"></textarea>
+        <input class="field" type="file" id="iccScreenshotField" accept="image/*" />
+        <img id="iccPreview" class="previewImg" />
       </div>
-      <button class="cta">Save Trade + Feedback</button>
+      <button class="cta" id="saveICCTradeBtn">Save Trade + Feedback</button>
     </div>
   </div>
 
@@ -300,9 +309,49 @@
     </div>
 
     <div class="bottomBtns">
+      <button class="btnWide journalBtn" id="emaJournalTop">⭐ Journal It</button>
       <button class="btnWide resetBtn" id="emaResetAllBtn">🔄 Reset</button>
       <button class="btnWide rulesBtn" id="emaRulesBtn">🚫 Rules</button>
     </div>
+
+    <div class="panel section" style="margin-top:14px;">
+      <h2 class="sectionTitle">EMA Journal Entry</h2>
+      <div class="sub" style="margin-bottom:12px;">Auto-filled from your EMA checklist. Add your chart screenshot too.</div>
+      <div class="smallBadge" id="emaJournalBadge">NO TRADE</div>
+      <div class="journalGrid" style="margin-top:12px;">
+        <div class="row2">
+          <input class="field" id="emaStrategyField" value="EMA / TEMA" readonly />
+          <input class="field" id="emaDirectionField" value="Long" readonly />
+        </div>
+        <div class="row2">
+          <input class="field" id="emaScoreField" value="0%" readonly />
+          <input class="field" id="emaStatusField" value="NO TRADE" readonly />
+        </div>
+        <div class="row2">
+          <input class="field" id="emaEntryField" placeholder="Entry" />
+          <input class="field" id="emaSlField" placeholder="Stop Loss" />
+        </div>
+        <div class="row2">
+          <input class="field" id="emaTpField" placeholder="TP1 / TP2" />
+          <select class="field" id="emaResultField">
+            <option value="">Result</option>
+            <option>Win</option>
+            <option>Loss</option>
+            <option>Breakeven</option>
+          </select>
+        </div>
+        <textarea class="field" id="emaLessonField" placeholder="Mistake / lesson / note"></textarea>
+        <input class="field" type="file" id="emaScreenshotField" accept="image/*" />
+        <img id="emaPreview" class="previewImg" />
+      </div>
+      <button class="cta" id="saveEMATradeBtn">Save Trade + Feedback</button>
+    </div>
+  </div>
+
+  <div class="panel section" style="margin-top:14px;">
+    <h2 class="sectionTitle">Linked Journal</h2>
+    <div class="sub">Trades saved from ICC and EMA show here.</div>
+    <div id="journalList" class="entryList"></div>
   </div>
 </div>
 
@@ -338,6 +387,8 @@
 </div>
 
 <script>
+const STORAGE_KEY = 'faceless_strategy_journal_v1';
+let journalEntries = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
 const strategyTabs = document.querySelectorAll('[data-strategy]');
 strategyTabs.forEach(btn => {
   btn.addEventListener('click', () => {
@@ -467,6 +518,50 @@ const emaState = { strategy:"ema", direction:"Long", activePhase:null, checked:{
 Object.values(emaData).forEach(phase => phase.items.forEach(item => emaState.checked[item.key] = false));
 const emaPhaseOrder = ["setup","indication","correction","entry"];
 
+let iccPreviewData = '';
+let emaPreviewData = '';
+
+function saveJournalStorage(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(journalEntries));
+}
+function renderJournalList(){
+  const list = document.getElementById('journalList');
+  if(!journalEntries.length){
+    list.innerHTML = '<div class="entryCard"><div class="entryTitle">No journal entries yet</div><div class="entryMeta">Saved ICC and EMA trades will appear here.</div></div>';
+    return;
+  }
+  list.innerHTML = journalEntries.slice().reverse().map((entry, idx) => `
+    <div class="entryCard">
+      <div class="entryTop">
+        <div>
+          <div class="entryTitle">${entry.strategy} • ${entry.result || 'Unlogged'}</div>
+          <div class="entryMeta">${entry.modeOrDirection} • ${entry.sessionOrStatus} • ${entry.score}</div>
+        </div>
+        <div class="smallBadge">${entry.date}</div>
+      </div>
+      <div class="entryMeta" style="margin-top:8px;">Entry: ${entry.entry || '-'} · SL: ${entry.sl || '-'} · TP: ${entry.tp || '-'}</div>
+      <div class="entryMeta" style="margin-top:8px;">${entry.note || 'No note added.'}</div>
+      ${entry.image ? `<img class="entryImg" style="display:block" src="${entry.image}" />` : ''}
+    </div>
+  `).join('');
+}
+function bindPreview(inputId, imgId, setter){
+  document.getElementById(inputId).addEventListener('change', e => {
+    const file = e.target.files && e.target.files[0];
+    const img = document.getElementById(imgId);
+    if(!file){ setter(''); img.style.display='none'; img.src=''; return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setter(reader.result);
+      img.src = reader.result;
+      img.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  });
+}
+bindPreview('iccScreenshotField','iccPreview',v=>iccPreviewData=v);
+bindPreview('emaScreenshotField','emaPreview',v=>emaPreviewData=v);
+
 function openGenericPhase(stateObj, dataObj, phaseKey){
   stateObj.activePhase = phaseKey;
   const phase = dataObj[phaseKey];
@@ -504,7 +599,7 @@ document.querySelectorAll("[data-phase]").forEach(el => el.onclick = () => openG
 document.querySelectorAll("[data-ema-phase]").forEach(el => el.onclick = () => openGenericPhase(emaState, emaData, el.dataset.emaPhase));
 
 document.getElementById("resetPhaseBtn").onclick = () => {
-  const current = sheet.classList.contains("show") ? (document.getElementById("sheetTitle").textContent) : "";
+  const current = document.getElementById("sheetTitle").textContent;
   if (iccState.activePhase && iccData[iccState.activePhase] && iccData[iccState.activePhase].title === current){
     iccData[iccState.activePhase].items.forEach(item => iccState.checked[item.key] = false);
     updateICCUI();
@@ -584,9 +679,9 @@ function updateICCUI(){
   document.getElementById("activeRules").textContent = violations.length + " active";
   document.getElementById("tradeState").textContent = status.tradeState;
   document.getElementById("journalBadge").textContent = status.scoreHint;
-  document.getElementById("modeField").value = iccState.mode;
-  document.getElementById("sessionField").value = iccState.session;
-  document.getElementById("scoreField").value = score + "%";
+  document.getElementById("iccModeField").value = iccState.mode;
+  document.getElementById("iccSessionField").value = iccState.session;
+  document.getElementById("iccScoreField").value = score + "%";
 }
 
 function getEMAViolations(){
@@ -634,6 +729,10 @@ function updateEMAUI(){
     emaState.direction === "Long"
       ? "Long setup selected. Wait for bullish crossover + retest."
       : "Short setup selected. Wait for bearish crossover + retest.";
+  document.getElementById("emaDirectionField").value = emaState.direction;
+  document.getElementById("emaScoreField").value = score + "%";
+  document.getElementById("emaStatusField").value = status.badge;
+  document.getElementById("emaJournalBadge").textContent = status.scoreHint;
 }
 
 document.getElementById("resetAllBtn").onclick = () => {
@@ -674,8 +773,54 @@ document.getElementById("closeWarningBtn").onclick = () => warningPopup.classLis
 document.getElementById("reviewRulesBtn").onclick = () => warningPopup.classList.remove("show");
 warningPopup.addEventListener("click", e => { if (e.target.id === "warningPopup") warningPopup.classList.remove("show"); });
 
+document.getElementById("journalItTop").onclick = () => {
+  document.querySelector('#iccView .section').scrollIntoView({behavior:'smooth', block:'start'});
+};
+document.getElementById("emaJournalTop").onclick = () => {
+  document.querySelector('#emaView .section').scrollIntoView({behavior:'smooth', block:'start'});
+};
+
+document.getElementById('saveICCTradeBtn').onclick = () => {
+  const entry = {
+    strategy: 'ICC',
+    modeOrDirection: document.getElementById('iccModeField').value,
+    sessionOrStatus: document.getElementById('iccSessionField').value,
+    score: document.getElementById('iccScoreField').value,
+    entry: document.getElementById('iccEntryField').value,
+    sl: document.getElementById('iccSlField').value,
+    tp: document.getElementById('iccTpField').value,
+    result: document.getElementById('iccResultField').value,
+    note: document.getElementById('iccLessonField').value,
+    image: iccPreviewData,
+    date: new Date().toLocaleDateString()
+  };
+  journalEntries.push(entry);
+  saveJournalStorage();
+  renderJournalList();
+};
+
+document.getElementById('saveEMATradeBtn').onclick = () => {
+  const entry = {
+    strategy: 'EMA / TEMA',
+    modeOrDirection: document.getElementById('emaDirectionField').value,
+    sessionOrStatus: document.getElementById('emaStatusField').value,
+    score: document.getElementById('emaScoreField').value,
+    entry: document.getElementById('emaEntryField').value,
+    sl: document.getElementById('emaSlField').value,
+    tp: document.getElementById('emaTpField').value,
+    result: document.getElementById('emaResultField').value,
+    note: document.getElementById('emaLessonField').value,
+    image: emaPreviewData,
+    date: new Date().toLocaleDateString()
+  };
+  journalEntries.push(entry);
+  saveJournalStorage();
+  renderJournalList();
+};
+
 updateICCUI();
 updateEMAUI();
+renderJournalList();
 </script>
 </body>
 </html>
