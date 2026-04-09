@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Faceless Trader — ICC + EMA Strategy Build</title>
+<style>
+  :root{
+    --bg:#090711; --bg2:#120d22; --card:#17122a; --text:#f7efff; --muted:#c7b9da;
+    --pink:#ff3bbd; --purple:#8b5cf6; --blue:#39b8ff; --green:#44e1a7; --yellow:#ffce52; --red:#ff5e7e;
+    --line:rgba(255,255,255,.09); --shadow:0 12px 32px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.04) inset;
+    --glow:0 0 0 1px rgba(255,255,255,.05), 0 0 28px rgba(255,59,189,.12); --radius:22px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    background:
+      radial-gradient(circle at top left, rgba(139,92,246,.18), transparent 28%),
+      radial-gradient(circle at top right, rgba(57,184,255,.12), transparent 25%),
+      linear-gradient(180deg, var(--bg), #0d0a18 50%, var(--bg2));
+  }
+  body{padding:18px}
+  .app{max-width:420px;margin:0 auto}
+  .panel{
+    background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015));
+    border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow), var(--glow); backdrop-filter:blur(12px);
+  }
+  .hero{padding:18px 18px 16px}
+  .heroTop{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+  h1{font-size:28px;margin:0 0 4px}
+  .sub{color:var(--muted);font-size:13px;line-height:1.35}
+  .badge{
+    padding:8px 12px;border-radius:999px;font-size:12px;font-weight:700;
+    background:linear-gradient(135deg, rgba(255,59,189,.22), rgba(139,92,246,.22)); border:1px solid rgba(255,255,255,.08);
+    white-space:nowrap;
+  }
+  .tabs,.sessions,.strategyTabs{display:flex;gap:10px;margin-top:14px}
+  .pill{
+    flex:1;border:none;color:var(--text);background:#1a1430;padding:12px 14px;border-radius:999px;font-weight:700;font-size:14px;
+    border:1px solid rgba(255,255,255,.06); cursor:pointer;
+  }
+  .pill.active{background:linear-gradient(135deg, rgba(255,59,189,.92), rgba(139,92,246,.92)); box-shadow:0 10px 24px rgba(255,59,189,.22)}
+  .pill.secondary.active{background:linear-gradient(135deg, rgba(57,184,255,.92), rgba(139,92,246,.92)); box-shadow:0 10px 24px rgba(57,184,255,.18)}
+  .stats,.grid,.actionCards,.bottomBtns{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+  .stat,.phaseCard,.actionCard,.section{padding:16px;border-radius:20px;background:linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.02));border:1px solid var(--line)}
+  .label{color:var(--muted);font-size:12px}
+  .big{font-size:32px;font-weight:800;margin-top:4px}
+  .smallBadge{display:inline-block;margin-top:8px;padding:5px 10px;border-radius:999px;font-size:11px;font-weight:800;background:rgba(255,255,255,.06)}
+  .progressWrap{margin-top:14px}
+  .track{height:12px;background:#150f28;border-radius:999px;overflow:hidden;border:1px solid rgba(255,255,255,.05)}
+  .fill{height:100%;width:0%;background:linear-gradient(90deg, var(--pink), var(--purple), var(--blue));border-radius:999px;transition:width .25s ease}
+  .phaseCard,.actionCard{min-height:118px;cursor:pointer;position:relative;overflow:hidden}
+  .phaseTitle,.actionTitle{font-size:16px;font-weight:800;margin-bottom:6px}
+  .phaseDesc,.actionDesc{font-size:12px;line-height:1.35;color:var(--muted)}
+  .phaseMeta,.actionMeta{margin-top:10px;display:flex;justify-content:space-between;align-items:center}
+  .miniCount{font-size:11px;color:var(--muted)}
+  .openBtn{font-size:12px;font-weight:800;color:#fff;opacity:.9}
+  .btnWide{
+    border:none;border-radius:18px;padding:14px 16px;font-size:14px;font-weight:800;color:white;cursor:pointer
+  }
+  .journalBtn{background:linear-gradient(135deg, rgba(68,225,167,.8), rgba(57,184,255,.7));box-shadow:0 12px 24px rgba(68,225,167,.16)}
+  .resetBtn{background:#211736}
+  .rulesBtn{background:linear-gradient(135deg, rgba(255,94,126,.8), rgba(139,92,246,.75));box-shadow:0 12px 24px rgba(255,94,126,.14)}
+  .sectionTitle{font-weight:800;font-size:16px;margin:0 0 10px}
+  .journalGrid{display:grid;gap:10px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .field{
+    background:#130f22;border:1px solid rgba(255,255,255,.07);color:var(--text);border-radius:16px;padding:12px 14px;width:100%;outline:none
+  }
+  textarea.field{min-height:88px;resize:vertical}
+  .cta{
+    margin-top:14px;width:100%;border:none;border-radius:18px;padding:15px 16px;font-size:15px;font-weight:900;color:white;cursor:pointer;
+    background:linear-gradient(135deg, var(--pink), var(--purple));box-shadow:0 12px 24px rgba(255,59,189,.22)
+  }
+  .feedback{margin-top:14px;padding:16px;display:none}
+  .feedback.show{display:block}
+  .feedback h3{margin:0 0 10px;font-size:19px}
+  .tag{display:inline-block;padding:6px 10px;border-radius:999px;font-size:11px;font-weight:900;background:rgba(255,255,255,.06);margin-right:6px;margin-bottom:6px}
+  .list{margin:10px 0 0;padding-left:18px;color:var(--muted);font-size:13px;line-height:1.5}
+  .sheet,.popup{
+    position:fixed;inset:0;background:rgba(5,4,10,.62);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;z-index:60;padding:12px
+  }
+  .sheet.show,.popup.show{display:flex}
+  .sheetCard,.popupCard{
+    width:min(100%,420px);max-height:90vh;overflow:auto;background:linear-gradient(180deg, rgba(20,14,34,.98), rgba(15,11,26,.98));
+    border:1px solid rgba(255,255,255,.08);border-radius:28px;box-shadow:var(--shadow), 0 0 34px rgba(255,59,189,.16);padding:18px
+  }
+  .sheetHead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
+  .sheetTitle{font-size:24px;font-weight:900;margin:0}
+  .sheetSub{font-size:12px;color:var(--muted);margin-top:4px}
+  .x{width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;color:#fff;background:#22173a;font-size:18px;font-weight:900}
+  .checklist{display:grid;gap:10px;margin-top:12px}
+  .item{
+    padding:14px;border-radius:18px;background:linear-gradient(180deg, rgba(255,255,255,.045), rgba(255,255,255,.018));border:1px solid rgba(255,255,255,.07);
+    cursor:pointer;display:grid;grid-template-columns:24px 1fr;gap:12px;align-items:flex-start
+  }
+  .box{width:24px;height:24px;border-radius:50%;border:2px solid rgba(255,255,255,.22);margin-top:2px;display:grid;place-items:center;font-size:14px;font-weight:900}
+  .item.checked .box{background:linear-gradient(135deg, var(--green), var(--blue));border-color:transparent;color:#061312}
+  .itemTitle{font-size:15px;font-weight:800}
+  .itemDesc{font-size:12px;color:var(--muted);line-height:1.4;margin-top:4px}
+  .rule{margin-top:12px;padding:13px 14px;border-radius:18px;background:linear-gradient(180deg, rgba(255,206,82,.12), rgba(255,206,82,.05));border:1px solid rgba(255,206,82,.22);font-size:12px;color:#ffebaf}
+  .danger{margin-top:12px;padding:13px 14px;border-radius:18px;background:linear-gradient(180deg, rgba(255,94,126,.12), rgba(255,94,126,.05));border:1px solid rgba(255,94,126,.22);font-size:12px;color:#ffc0cb}
+  .sheetActions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+  .miniBtn{border:none;border-radius:16px;padding:13px 14px;font-weight:800;color:white;cursor:pointer;background:#211736}
+  .miniBtn.primary{background:linear-gradient(135deg, var(--pink), var(--purple))}
+  .popupCard h3{margin:0 0 6px;font-size:22px}
+  .popupCard p{margin:0;color:var(--muted);line-height:1.45}
+  .warnList{margin:14px 0 0;padding-left:18px;color:#ffd0da}
+  .strategyView{display:none}
+  .strategyView.active{display:block}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="strategyTabs">
+    <button class="pill" data-strategy="icc">ICC Strategy</button>
+    <button class="pill" data-strategy="ema">EMA Strategy</button>
+  </div>
+
+  <div id="iccView" class="strategyView active">
+    <div class="panel hero">
+      <div class="heroTop">
+        <div>
+          <h1>ICC Strategy</h1>
+          <div class="sub">Indication • Correction • Continuation</div>
+        </div>
+        <div class="badge" id="statusBadge">WAIT</div>
+      </div>
+
+      <div class="tabs">
+        <button class="pill active" data-mode="1M">1M ⚡</button>
+        <button class="pill" data-mode="5M">5M 🧘🏽‍♀️</button>
+      </div>
+
+      <div class="sessions">
+        <button class="pill secondary" data-session="Asia">Asia</button>
+        <button class="pill secondary" data-session="London">London</button>
+        <button class="pill secondary active" data-session="NY">NY</button>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="big" id="scoreValue">0%</div>
+          <div class="label">Setup Strength</div>
+          <div class="smallBadge" id="scoreHint">WAIT</div>
+        </div>
+        <div class="stat">
+          <div class="label">Status</div>
+          <div class="big" style="font-size:28px;" id="statusText">Not Clean Yet</div>
+          <div class="sub" id="statusSub" style="margin-top:8px;">More confirmation needed before entry.</div>
+        </div>
+      </div>
+
+      <div class="progressWrap">
+        <div class="track"><div class="fill" id="progressFill"></div></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="panel phaseCard" data-phase="bias">
+        <div class="phaseTitle">Bias + Setup</div>
+        <div class="phaseDesc">HTF bias, swing levels, pre-indication, target.</div>
+        <div class="phaseMeta"><div class="miniCount" id="count-bias">0 / 4</div><div class="openBtn">Not complete</div></div>
+      </div>
+      <div class="panel phaseCard" data-phase="indication">
+        <div class="phaseTitle">Indication</div>
+        <div class="phaseDesc">1M close past level. Confirm direction. No entry here.</div>
+        <div class="phaseMeta"><div class="miniCount" id="count-indication">0 / 4</div><div class="openBtn">Not complete</div></div>
+      </div>
+      <div class="panel phaseCard" data-phase="correction">
+        <div class="phaseTitle">Correction</div>
+        <div class="phaseDesc">Clean pullback, internal shift, retest, no wrong-side break.</div>
+        <div class="phaseMeta"><div class="miniCount" id="count-correction">0 / 4</div><div class="openBtn">Not complete</div></div>
+      </div>
+      <div class="panel phaseCard" data-phase="entry">
+        <div class="phaseTitle">Continuation Entry</div>
+        <div class="phaseDesc">1M close back through level, limit entry, SL, TP1/TP2, no chasing.</div>
+        <div class="phaseMeta"><div class="miniCount" id="count-entry">0 / 4</div><div class="openBtn">Not complete</div></div>
+      </div>
+    </div>
+
+    <div class="actionCards">
+      <div class="panel actionCard" id="walkAwayCard">
+        <div class="actionTitle">Walk Away Rules</div>
+        <div class="actionDesc">Auto no-trade conditions and discipline lockouts.</div>
+        <div class="actionMeta"><div class="smallBadge" id="activeRules">0 active</div></div>
+      </div>
+      <div class="panel actionCard" id="takeTradeCard">
+        <div class="actionTitle">Take Trade</div>
+        <div class="actionDesc">Push ICC result into journal with score, session, timeframe, and notes.</div>
+        <div class="actionMeta"><div class="smallBadge" id="tradeState">Locked</div></div>
+      </div>
+    </div>
+
+    <div class="bottomBtns">
+      <button class="btnWide journalBtn" id="journalItTop">⭐ Journal It</button>
+      <button class="btnWide resetBtn" id="resetAllBtn">🔄 Reset</button>
+      <button class="btnWide rulesBtn" id="rulesBtn">🚫 Rules</button>
+    </div>
+
+    <div class="panel section" style="margin-top:14px;">
+      <h2 class="sectionTitle">ICC Journal Entry</h2>
+      <div class="sub" style="margin-bottom:12px;">Auto-filled from your checklist. Add your chart screenshot too.</div>
+      <div class="smallBadge" id="journalBadge">WAIT</div>
+      <div class="journalGrid" style="margin-top:12px;">
+        <div class="row2">
+          <input class="field" id="strategyField" value="ICC" readonly />
+          <input class="field" id="modeField" value="1M" readonly />
+        </div>
+        <div class="row2">
+          <input class="field" id="sessionField" value="NY" readonly />
+          <input class="field" id="scoreField" value="0%" readonly />
+        </div>
+        <div class="row2">
+          <input class="field" placeholder="Entry" />
+          <input class="field" placeholder="Stop Loss" />
+        </div>
+        <div class="row2">
+          <input class="field" placeholder="TP1 / TP2" />
+          <select class="field">
+            <option value="">Result</option>
+            <option>Win</option>
+            <option>Loss</option>
+            <option>Breakeven</option>
+          </select>
+        </div>
+        <textarea class="field" placeholder="Mistake / lesson / note"></textarea>
+        <input class="field" type="file" />
+      </div>
+      <button class="cta">Save Trade + Feedback</button>
+    </div>
+  </div>
+
+  <div id="emaView" class="strategyView">
+    <div class="panel hero">
+      <div class="heroTop">
+        <div>
+          <h1>EMA / TEMA Strategy</h1>
+          <div class="sub">Setup • Indication • Correction • Entry</div>
+        </div>
+        <div class="badge" id="emaStatusBadge">NO TRADE</div>
+      </div>
+
+      <div class="tabs">
+        <button class="pill active" data-ema-direction="Long">Long</button>
+        <button class="pill" data-ema-direction="Short">Short</button>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <div class="big" id="emaScoreValue">0%</div>
+          <div class="label">Checklist Score</div>
+          <div class="smallBadge" id="emaScoreHint">NO TRADE</div>
+        </div>
+        <div class="stat">
+          <div class="label">Status</div>
+          <div class="big" style="font-size:28px;" id="emaStatusText">Not Clean Yet</div>
+          <div class="sub" id="emaStatusSub" style="margin-top:8px;">Wait for crossover, retest, and momentum before entry.</div>
+        </div>
+      </div>
+
+      <div class="progressWrap">
+        <div class="track"><div class="fill" id="emaProgressFill"></div></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="panel phaseCard" data-ema-phase="setup">
+        <div class="phaseTitle">Setup</div>
+        <div class="phaseDesc">Indicators loaded, chart clean, direction framework ready.</div>
+        <div class="phaseMeta"><div class="miniCount" id="ema-count-setup">0 / 4</div><div class="openBtn">Not complete</div></div>
+      </div>
+      <div class="panel phaseCard" data-ema-phase="indication">
+        <div class="phaseTitle">Indication</div>
+        <div class="phaseDesc">Clean crossover, close confirmation, direction clear.</div>
+        <div class="phaseMeta"><div class="miniCount" id="ema-count-indication">0 / 4</div><div class="openBtn">Not complete</div></div>
+      </div>
+      <div class="panel phaseCard" data-ema-phase="correction">
+        <div class="phaseTitle">Correction</div>
+        <div class="phaseDesc">Retest holds, entry is not late, momentum still alive.</div>
+        <div class="phaseMeta"><div class="miniCount" id="ema-count-correction">0 / 4</div><div class="openBtn">Not complete</div></div>
+      </div>
+      <div class="panel phaseCard" data-ema-phase="entry">
+        <div class="phaseTitle">Entry</div>
+        <div class="phaseDesc">Momentum confirms, stop is logical, targets set.</div>
+        <div class="phaseMeta"><div class="miniCount" id="ema-count-entry">0 / 4</div><div class="openBtn">Not complete</div></div>
+      </div>
+    </div>
+
+    <div class="actionCards">
+      <div class="panel actionCard">
+        <div class="actionTitle">Direction</div>
+        <div class="actionDesc" id="emaDirectionCopy">Long setup selected. Wait for bullish crossover + retest.</div>
+        <div class="actionMeta"><div class="smallBadge" id="emaDirectionBadge">Long</div></div>
+      </div>
+      <div class="panel actionCard">
+        <div class="actionTitle">Unlock Trade</div>
+        <div class="actionDesc">Use score + phase completion before taking the setup.</div>
+        <div class="actionMeta"><div class="smallBadge" id="emaTradeState">Locked</div></div>
+      </div>
+    </div>
+
+    <div class="bottomBtns">
+      <button class="btnWide resetBtn" id="emaResetAllBtn">🔄 Reset</button>
+      <button class="btnWide rulesBtn" id="emaRulesBtn">🚫 Rules</button>
+    </div>
+  </div>
+</div>
+
+<div class="sheet" id="sheet">
+  <div class="sheetCard">
+    <div class="sheetHead">
+      <div>
+        <div class="sheetTitle" id="sheetTitle">Phase</div>
+        <div class="sheetSub" id="sheetSub">Checklist</div>
+      </div>
+      <button class="x" id="closeSheet">×</button>
+    </div>
+    <div class="checklist" id="checklist"></div>
+    <div class="rule" id="ruleBox"></div>
+    <div class="danger" id="dangerBox"></div>
+    <div class="sheetActions">
+      <button class="miniBtn" id="resetPhaseBtn">Reset Phase</button>
+      <button class="miniBtn primary" id="donePhaseBtn">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="popup" id="warningPopup">
+  <div class="popupCard">
+    <h3>⚠️ Warning</h3>
+    <p id="warningIntro">This setup is breaking one or more no-trade rules.</p>
+    <ul class="warnList" id="warningList"></ul>
+    <div class="sheetActions" style="margin-top:16px;">
+      <button class="miniBtn" id="closeWarningBtn">Go Back</button>
+      <button class="miniBtn primary" id="reviewRulesBtn">Review</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const strategyTabs = document.querySelectorAll('[data-strategy]');
+strategyTabs.forEach(btn => {
+  btn.addEventListener('click', () => {
+    strategyTabs.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const isICC = btn.dataset.strategy === 'icc';
+    document.getElementById('iccView').classList.toggle('active', isICC);
+    document.getElementById('emaView').classList.toggle('active', !isICC);
+    window.scrollTo({top:0, behavior:'smooth'});
+  });
+});
+strategyTabs[0].classList.add('active');
+
+const iccData = {
+  bias: {
+    title: "Bias + Setup",
+    sub: "Phase 1 • Mark the higher time frame before execution",
+    rule: "Use the 1H and 4H to build bias first. These levels are what you are actively watching for reaction.",
+    danger: "No HTF bias = automatic No Trade.",
+    items: [
+      { key:"htf_bias", title:"HTF Bias Clear", desc:"Use the 1H and 4H to determine overall direction before looking for an entry." },
+      { key:"swing_levels", title:"Swing High / Low", desc:"These can be marked on both the 1H and 4H. These are the levels you are actively watching for reaction." },
+      { key:"pre_indication", title:"Pre-Indication Level", desc:"This is the key level price has not fully broken yet. You are waiting for a clean close beyond it." },
+      { key:"target_identified", title:"Target Identified", desc:"Know where price is likely moving before entering the trade." }
+    ]
+  },
+  indication: {
+    title: "Indication",
+    sub: "Phase 2 • Wait for the true break",
+    rule: "Indication confirms direction only. Entry does not happen here.",
+    danger: "Wick only or early entry = No Trade.",
+    items: [
+      { key:"close_past_level", title:"Candle Close Past Level", desc:"This must be a true candle close, not just a wick through the level." },
+      { key:"bullish_or_bearish", title:"Directional Confirmation", desc:"The close should clearly support the direction of the trade above swing high or below swing low." },
+      { key:"no_entry_yet", title:"No Entry Yet", desc:"Indication confirms direction only. Do not enter at this stage." },
+      { key:"no_wick_only", title:"No Wick-Only Confirmation", desc:"A wick without a close does not count as confirmation." }
+    ]
+  },
+  correction: {
+    title: "Correction",
+    sub: "Phase 3 • Let the pullback finish",
+    rule: "The correction is not complete at the pullback. It completes at the retest + close.",
+    danger: "Wrong-side structure break = No Trade.",
+    items: [
+      { key:"clean_pullback", title:"Clean Pullback", desc:"Price should pull back in a controlled way, not randomly spike around." },
+      { key:"observe_retrace", title:"Observe Retrace", desc:"Let the retrace develop naturally. Watch, do not rush." },
+      { key:"internal_shift", title:"Structure Shift Forms", desc:"Watch for internal structure to form during the pullback." },
+      { key:"retest_close", title:"Retest + Close", desc:"The correction is complete only when the retest and close confirm it." }
+    ]
+  },
+  entry: {
+    title: "Continuation Entry",
+    sub: "Phase 4 • Confirmation first, then execution",
+    rule: "Enter only after continuation is confirmed. No chasing.",
+    danger: "No close, no SL, or chasing = No Trade.",
+    items: [
+      { key:"continuation_close", title:"Continuation Close", desc:"Enter only after continuation is confirmed back through the level." },
+      { key:"limit_entry", title:"Limit Entry", desc:"Respect the setup. No chasing the move if the level is missed." },
+      { key:"stop_loss", title:"Stop Loss Set", desc:"Your risk should already be defined before entry." },
+      { key:"targets_marked", title:"TP1 / TP2 Marked", desc:"Know where partials and full targets are before taking the trade." }
+    ]
+  }
+};
+
+const emaData = {
+  setup: {
+    title: "Setup",
+    sub: "Phase 1 • Load the environment before the signal",
+    rule: "Your chart should already be prepared before you even look for a crossover.",
+    danger: "Missing indicators or a messy chart = No Trade.",
+    items: [
+      { key:"ema_8", title:"8 EMA Is On Chart", desc:"The fast EMA must be visible before the setup can be graded." },
+      { key:"tema_55", title:"55 TEMA Is On Chart", desc:"The main trend TEMA must be present and readable." },
+      { key:"tema_13_21", title:"13 / 21 TEMA Are Visible", desc:"The internal trend structure should be visible before the signal appears." },
+      { key:"clean_chart", title:"Chart Is Clean", desc:"No heavy clutter, overlapping drawings, or conditions that hide the setup." }
+    ]
+  },
+  indication: {
+    title: "Indication",
+    sub: "Phase 2 • Wait for the crossover to confirm direction",
+    rule: "The crossover must be clean and direction must be obvious before you consider the entry.",
+    danger: "Messy crossover or unclear direction = No Trade.",
+    items: [
+      { key:"clean_cross", title:"Clean Crossover Happened", desc:"The crossover should be visible and not just a touch or fake-out." },
+      { key:"direction_clear", title:"Direction Is Clear After Crossover", desc:"Long means bullish structure. Short means bearish structure." },
+      { key:"tema_stacked", title:"55 TEMA Is Stacked Correctly", desc:"The slow trend line must support the direction of the setup." },
+      { key:"close_confirmed", title:"Close Confirmed The Signal", desc:"Wait for the candle close to confirm the crossover instead of reacting early." }
+    ]
+  },
+  correction: {
+    title: "Correction",
+    sub: "Phase 3 • Let the retest do its job",
+    rule: "The retest should respect the EMA zone and prove the setup is not late.",
+    danger: "Deep break or late extension = No Trade.",
+    items: [
+      { key:"retest_8", title:"Price Retested The 8 EMA", desc:"Price should come back into the retest area instead of running away." },
+      { key:"retest_respected", title:"Candle Respected The Retest Area", desc:"The retest should hold and show reaction instead of slicing through." },
+      { key:"not_late", title:"Entry Is Not Late Or Extended", desc:"Do not chase after the move is already stretched." },
+      { key:"1m_5m_aligned", title:"1 Min And 5 Min Are Aligned", desc:"The lower and execution timeframes should support each other." }
+    ]
+  },
+  entry: {
+    title: "Entry",
+    sub: "Phase 4 • Momentum confirms execution",
+    rule: "Take the entry only after momentum, risk, and target are already defined.",
+    danger: "No momentum, no stop, or no target = No Trade.",
+    items: [
+      { key:"momentum_confirms", title:"Strong Push / Momentum Confirms Entry", desc:"The move should have energy, not weak drift." },
+      { key:"no_chop", title:"No Chop / Not Tangled Up", desc:"Avoid entry when price is chopping around the moving averages." },
+      { key:"target_defined", title:"Target Is Defined Before Entry", desc:"Your TP has to be known before you click in." },
+      { key:"stop_logical", title:"Stop Loss Is Logical", desc:"The stop should make sense structurally and fit the setup." }
+    ]
+  }
+};
+
+const sheet = document.getElementById("sheet");
+const checklist = document.getElementById("checklist");
+const warningPopup = document.getElementById("warningPopup");
+const warningList = document.getElementById("warningList");
+const warningIntro = document.getElementById("warningIntro");
+
+const iccState = { strategy:"icc", mode:"1M", session:"NY", activePhase:null, checked:{} };
+Object.values(iccData).forEach(phase => phase.items.forEach(item => iccState.checked[item.key] = false));
+const iccPhaseOrder = ["bias","indication","correction","entry"];
+
+const emaState = { strategy:"ema", direction:"Long", activePhase:null, checked:{} };
+Object.values(emaData).forEach(phase => phase.items.forEach(item => emaState.checked[item.key] = false));
+const emaPhaseOrder = ["setup","indication","correction","entry"];
+
+function openGenericPhase(stateObj, dataObj, phaseKey){
+  stateObj.activePhase = phaseKey;
+  const phase = dataObj[phaseKey];
+  document.getElementById("sheetTitle").textContent = phase.title;
+  document.getElementById("sheetSub").textContent = phase.sub;
+  document.getElementById("ruleBox").textContent = phase.rule;
+  document.getElementById("dangerBox").textContent = phase.danger;
+  checklist.innerHTML = "";
+  phase.items.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "item" + (stateObj.checked[item.key] ? " checked" : "");
+    div.innerHTML = `
+      <div class="box">${stateObj.checked[item.key] ? "✓" : ""}</div>
+      <div>
+        <div class="itemTitle">${item.title}</div>
+        <div class="itemDesc">${item.desc}</div>
+      </div>`;
+    div.onclick = () => {
+      stateObj.checked[item.key] = !stateObj.checked[item.key];
+      if (stateObj.strategy === 'icc') updateICCUI();
+      if (stateObj.strategy === 'ema') updateEMAUI();
+      openGenericPhase(stateObj, dataObj, phaseKey);
+    };
+    checklist.appendChild(div);
+  });
+  sheet.classList.add("show");
+}
+function closePhase(){ sheet.classList.remove("show"); }
+
+document.getElementById("closeSheet").onclick = closePhase;
+document.getElementById("donePhaseBtn").onclick = closePhase;
+sheet.addEventListener("click", e => { if (e.target.id === "sheet") closePhase(); });
+
+document.querySelectorAll("[data-phase]").forEach(el => el.onclick = () => openGenericPhase(iccState, iccData, el.dataset.phase));
+document.querySelectorAll("[data-ema-phase]").forEach(el => el.onclick = () => openGenericPhase(emaState, emaData, el.dataset.emaPhase));
+
+document.getElementById("resetPhaseBtn").onclick = () => {
+  const current = sheet.classList.contains("show") ? (document.getElementById("sheetTitle").textContent) : "";
+  if (iccState.activePhase && iccData[iccState.activePhase] && iccData[iccState.activePhase].title === current){
+    iccData[iccState.activePhase].items.forEach(item => iccState.checked[item.key] = false);
+    updateICCUI();
+    openGenericPhase(iccState, iccData, iccState.activePhase);
+    return;
+  }
+  if (emaState.activePhase && emaData[emaState.activePhase] && emaData[emaState.activePhase].title === current){
+    emaData[emaState.activePhase].items.forEach(item => emaState.checked[item.key] = false);
+    updateEMAUI();
+    openGenericPhase(emaState, emaData, emaState.activePhase);
+  }
+};
+
+document.querySelectorAll("[data-mode]").forEach(btn => btn.onclick = () => {
+  document.querySelectorAll("[data-mode]").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active"); iccState.mode = btn.dataset.mode; updateICCUI();
+});
+document.querySelectorAll("[data-session]").forEach(btn => btn.onclick = () => {
+  document.querySelectorAll("[data-session]").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active"); iccState.session = btn.dataset.session; updateICCUI();
+});
+document.querySelectorAll("[data-ema-direction]").forEach(btn => btn.onclick = () => {
+  document.querySelectorAll("[data-ema-direction]").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active"); emaState.direction = btn.dataset.emaDirection; updateEMAUI();
+});
+
+function getCounts(dataObj, order, checked){
+  const counts = {};
+  order.forEach(phaseKey => {
+    const phase = dataObj[phaseKey];
+    counts[phaseKey] = { total: phase.items.length, done: phase.items.filter(item => checked[item.key]).length };
+  });
+  return counts;
+}
+
+function getICCViolations(){
+  const v = [];
+  if (!iccState.checked.htf_bias) v.push("No clear 1H / 4H bias.");
+  if (iccState.checked.close_past_level && !iccState.checked.no_wick_only) v.push("Wick-only confirmation is not valid.");
+  if (iccState.checked.continuation_close && !iccState.checked.stop_loss) v.push("No stop loss set before entry.");
+  if (iccState.checked.continuation_close && !iccState.checked.limit_entry) v.push("Continuation marked without respecting limit entry.");
+  if (iccState.checked.close_past_level && !iccState.checked.no_entry_yet) v.push("You may be entering during indication instead of waiting.");
+  return v;
+}
+function computeICCScore(){
+  const total = Object.values(iccState.checked).length;
+  const done = Object.values(iccState.checked).filter(Boolean).length;
+  let score = Math.round((done / total) * 100);
+  if (!iccState.checked.htf_bias) score = Math.max(0, score - 20);
+  if (!iccState.checked.no_wick_only) score = Math.max(0, score - 10);
+  if (!iccState.checked.stop_loss) score = Math.max(0, score - 10);
+  return score;
+}
+function computeICCStatus(score){
+  const violations = getICCViolations();
+  const hardFail = violations.length > 0;
+  if (hardFail && score < 75) return {badge:"NO TRADE", scoreHint:"WAIT", title:"Not Clean Yet", sub:"Rule violation detected. Fix setup before entry.", tradeState:"Locked"};
+  if (score >= 90) return {badge:"A SETUP", scoreHint:"A SETUP", title:"Execute Trade", sub:"Clean confirmation, strong structure, valid execution plan.", tradeState:"Ready"};
+  if (score >= 75) return {badge:"B SETUP", scoreHint:"B SETUP", title:"Almost There", sub:"Tradable, but review any weak areas first.", tradeState:"Ready"};
+  return {badge:"WAIT", scoreHint:"WAIT", title:"Not Clean Yet", sub:"More confirmation needed before entry.", tradeState:"Locked"};
+}
+function updateICCUI(){
+  const counts = getCounts(iccData, iccPhaseOrder, iccState.checked);
+  iccPhaseOrder.forEach(key => document.getElementById("count-" + key).textContent = counts[key].done + " / " + counts[key].total);
+  const totalDone = Object.values(counts).reduce((a,b) => a + b.done, 0);
+  const totalItems = Object.values(counts).reduce((a,b) => a + b.total, 0);
+  const score = computeICCScore();
+  const status = computeICCStatus(score);
+  const violations = getICCViolations();
+
+  document.getElementById("scoreValue").textContent = score + "%";
+  document.getElementById("scoreHint").textContent = status.scoreHint;
+  document.getElementById("statusBadge").textContent = status.badge;
+  document.getElementById("statusText").textContent = status.title;
+  document.getElementById("statusSub").textContent = status.sub;
+  document.getElementById("progressFill").style.width = Math.round((totalDone/totalItems)*100) + "%";
+  document.getElementById("activeRules").textContent = violations.length + " active";
+  document.getElementById("tradeState").textContent = status.tradeState;
+  document.getElementById("journalBadge").textContent = status.scoreHint;
+  document.getElementById("modeField").value = iccState.mode;
+  document.getElementById("sessionField").value = iccState.session;
+  document.getElementById("scoreField").value = score + "%";
+}
+
+function getEMAViolations(){
+  const v = [];
+  if (!emaState.checked.clean_cross) v.push("No clean crossover yet.");
+  if (!emaState.checked.direction_clear) v.push("Direction is still unclear.");
+  if (!emaState.checked.retest_respected && emaState.checked.retest_8) v.push("Retest did not hold cleanly.");
+  if (!emaState.checked.stop_logical) v.push("Stop loss is not logical.");
+  if (!emaState.checked.target_defined) v.push("Target is not defined before entry.");
+  return v;
+}
+function computeEMAScore(){
+  const total = Object.values(emaState.checked).length;
+  const done = Object.values(emaState.checked).filter(Boolean).length;
+  let score = Math.round((done / total) * 100);
+  if (!emaState.checked.clean_cross) score = Math.max(0, score - 15);
+  if (!emaState.checked.direction_clear) score = Math.max(0, score - 10);
+  if (!emaState.checked.stop_logical) score = Math.max(0, score - 10);
+  return score;
+}
+function computeEMAStatus(score){
+  const violations = getEMAViolations();
+  if (violations.length && score < 75) return {badge:"NO TRADE", scoreHint:"NO TRADE", title:"Not Clean Yet", sub:"Wait for crossover, retest, and momentum before entry.", tradeState:"Locked"};
+  if (score >= 90) return {badge:"A SETUP", scoreHint:"A SETUP", title:"Ready To Trade", sub:"Trend, retest, and execution all line up.", tradeState:"Ready"};
+  if (score >= 75) return {badge:"B SETUP", scoreHint:"WATCH", title:"Almost There", sub:"Good trend setup. Review the weak spots before entry.", tradeState:"Watch"};
+  return {badge:"NO TRADE", scoreHint:"NO TRADE", title:"Not Clean Yet", sub:"Wait for crossover, retest, and momentum before entry.", tradeState:"Locked"};
+}
+function updateEMAUI(){
+  const counts = getCounts(emaData, emaPhaseOrder, emaState.checked);
+  emaPhaseOrder.forEach(key => document.getElementById("ema-count-" + key).textContent = counts[key].done + " / " + counts[key].total);
+  const totalDone = Object.values(counts).reduce((a,b) => a + b.done, 0);
+  const totalItems = Object.values(counts).reduce((a,b) => a + b.total, 0);
+  const score = computeEMAScore();
+  const status = computeEMAStatus(score);
+
+  document.getElementById("emaScoreValue").textContent = score + "%";
+  document.getElementById("emaScoreHint").textContent = status.scoreHint;
+  document.getElementById("emaStatusBadge").textContent = status.badge;
+  document.getElementById("emaStatusText").textContent = status.title;
+  document.getElementById("emaStatusSub").textContent = status.sub;
+  document.getElementById("emaProgressFill").style.width = Math.round((totalDone/totalItems)*100) + "%";
+  document.getElementById("emaTradeState").textContent = status.tradeState;
+  document.getElementById("emaDirectionBadge").textContent = emaState.direction;
+  document.getElementById("emaDirectionCopy").textContent =
+    emaState.direction === "Long"
+      ? "Long setup selected. Wait for bullish crossover + retest."
+      : "Short setup selected. Wait for bearish crossover + retest.";
+}
+
+document.getElementById("resetAllBtn").onclick = () => {
+  Object.keys(iccState.checked).forEach(k => iccState.checked[k] = false);
+  updateICCUI();
+};
+document.getElementById("emaResetAllBtn").onclick = () => {
+  Object.keys(emaState.checked).forEach(k => emaState.checked[k] = false);
+  updateEMAUI();
+};
+
+document.getElementById("rulesBtn").onclick = () => {
+  const violations = getICCViolations();
+  warningIntro.textContent = "This ICC setup is breaking one or more no-trade rules.";
+  warningList.innerHTML = (violations.length ? violations : [
+    "No clear 1H / 4H bias.",
+    "Wick-only confirmation.",
+    "Entering during indication.",
+    "No stop loss before entry.",
+    "Chasing instead of respecting limit entry."
+  ]).map(v => "<li>"+v+"</li>").join("");
+  warningPopup.classList.add("show");
+};
+document.getElementById("emaRulesBtn").onclick = () => {
+  const violations = getEMAViolations();
+  warningIntro.textContent = "This EMA setup is breaking one or more no-trade rules.";
+  warningList.innerHTML = (violations.length ? violations : [
+    "No clean crossover.",
+    "Direction is unclear.",
+    "Retest is weak.",
+    "No logical stop loss.",
+    "No target defined."
+  ]).map(v => "<li>"+v+"</li>").join("");
+  warningPopup.classList.add("show");
+};
+
+document.getElementById("closeWarningBtn").onclick = () => warningPopup.classList.remove("show");
+document.getElementById("reviewRulesBtn").onclick = () => warningPopup.classList.remove("show");
+warningPopup.addEventListener("click", e => { if (e.target.id === "warningPopup") warningPopup.classList.remove("show"); });
+
+updateICCUI();
+updateEMAUI();
+</script>
+</body>
+</html>
